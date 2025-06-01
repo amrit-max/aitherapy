@@ -20,9 +20,8 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
   const webcamRef = useRef<Webcam>(null);
   const therapist = THERAPIST_PROFILES[therapistType];
   const maxRetries = 3;
-  
+
   useEffect(() => {
-    // Check for webcam permission
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(() => setHasWebcamPermission(true))
       .catch((err) => {
@@ -35,15 +34,12 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
     if (videoAttempts < maxRetries) {
       setVideoAttempts(prev => prev + 1);
       setIsLoading(true);
-      // Retry with exponential backoff
       setTimeout(() => {
         const iframe = document.querySelector('iframe');
-        if (iframe) {
-          iframe.src = iframe.src;
-        }
+        if (iframe) iframe.src = iframe.src;
       }, Math.pow(2, videoAttempts) * 1000);
     } else {
-      setError('Unable to connect to the video service. Please check your connection and try again.');
+      setError('Unable to load the therapist video. Please check your connection and try again.');
       setIsLoading(false);
     }
   };
@@ -61,9 +57,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
           setHasWebcamPermission(true);
           setIsCameraOn(true);
         })
-        .catch(() => {
-          setError('Unable to access camera. Please check your permissions.');
-        });
+        .catch(() => setError('Unable to access camera. Please check your permissions.'));
     } else {
       setIsCameraOn(!isCameraOn);
     }
@@ -89,31 +83,29 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
 
   return (
     <div className="flex flex-col h-screen bg-neutral-900">
-      <div className="flex-1 flex">
-        {/* Main video container */}
+      <div className="flex-1 flex relative">
+        {/* Therapist video */}
         <div className="w-full p-4">
           <div className="relative h-full rounded-2xl overflow-hidden bg-neutral-800">
             {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
+              <div className="absolute inset-0 flex items-center justify-center bg-neutral-800 z-10">
                 <div className="animate-pulse text-neutral-400">Loading therapist...</div>
               </div>
             )}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <iframe
-                src={`https://platform.tavus.io/${therapist.agentId}`}
-                title={`${therapist.name} - AI Therapist`}
-                className="w-full h-full border-0"
-                allow="camera; microphone; fullscreen"
-                onError={handleVideoError}
-                onLoad={handleVideoLoad}
-              />
-            </div>
+            <iframe
+              src={therapist.videoUrl}
+              title={`${therapist.name} - AI Therapist`}
+              className="absolute inset-0 w-full h-full border-0 z-0"
+              allow="camera; microphone; fullscreen"
+              onError={handleVideoError}
+              onLoad={handleVideoLoad}
+            />
           </div>
         </div>
 
-        {/* User video (small overlay) */}
+        {/* User webcam (bottom right corner) */}
         {isCameraOn && hasWebcamPermission && (
-          <div className="absolute bottom-28 right-8 w-64 h-48 rounded-xl overflow-hidden shadow-lg">
+          <div className="absolute bottom-28 right-8 w-64 h-48 rounded-xl overflow-hidden shadow-lg z-20">
             <Webcam
               ref={webcamRef}
               audio={false}
@@ -130,35 +122,16 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
       {/* Controls */}
       <div className="h-24 bg-neutral-800 border-t border-neutral-700">
         <div className="container mx-auto h-full flex items-center justify-center space-x-4">
-          <Button
-            onClick={toggleMic}
-            variant={isMicOn ? 'primary' : 'outline'}
-            className="h-12 w-12 rounded-full"
-          >
+          <Button onClick={toggleMic} variant={isMicOn ? 'primary' : 'outline'} className="h-12 w-12 rounded-full">
             {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
           </Button>
-
-          <Button
-            onClick={toggleCamera}
-            variant={isCameraOn && hasWebcamPermission ? 'primary' : 'outline'}
-            className="h-12 w-12 rounded-full"
-          >
-            {isCameraOn && hasWebcamPermission ? <Camera size={20} /> : <CameraOff size={20} />}
+          <Button onClick={toggleCamera} variant={isCameraOn ? 'primary' : 'outline'} className="h-12 w-12 rounded-full">
+            {isCameraOn ? <Camera size={20} /> : <CameraOff size={20} />}
           </Button>
-
-          <Button
-            onClick={toggleAudio}
-            variant={isAudioOn ? 'primary' : 'outline'}
-            className="h-12 w-12 rounded-full"
-          >
+          <Button onClick={toggleAudio} variant={isAudioOn ? 'primary' : 'outline'} className="h-12 w-12 rounded-full">
             {isAudioOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
           </Button>
-
-          <Button
-            onClick={onEndSession}
-            variant="error"
-            className="px-6 rounded-full"
-          >
+          <Button onClick={onEndSession} variant="error" className="px-6 rounded-full">
             End Session
           </Button>
         </div>
