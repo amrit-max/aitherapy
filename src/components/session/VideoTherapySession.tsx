@@ -100,7 +100,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
             )}
             <div className="absolute inset-0 flex items-center justify-center">
               <iframe
-                src={`https://embed.tavus.io/${therapist.agentId}`}
+                src={`https://tavus.daily.co/c030286852cb/${therapist.agentId}`}
                 title={`${therapist.name} - AI Therapist`}
                 className="w-full h-full border-0"
                 allow="camera; microphone; fullscreen"
