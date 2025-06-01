@@ -14,11 +14,13 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [hasWebcamPermission, setHasWebcamPermission] = useState(false);
-  const [error, setError] = useState<string | null>("Video service is currently unavailable. Please try the chat interface instead.");
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [videoAttempts, setVideoAttempts] = useState(0);
   const webcamRef = useRef<Webcam>(null);
   const therapist = THERAPIST_PROFILES[therapistType];
-
+  const maxRetries = 3;
+  
   useEffect(() => {
     // Check for webcam permission
     navigator.mediaDevices.getUserMedia({ video: true })
@@ -28,6 +30,45 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
         console.error('Webcam permission error:', err);
       });
   }, []);
+
+  const handleVideoError = () => {
+    if (videoAttempts < maxRetries) {
+      setVideoAttempts(prev => prev + 1);
+      setIsLoading(true);
+      // Retry with exponential backoff
+      setTimeout(() => {
+        const iframe = document.querySelector('iframe');
+        if (iframe) {
+          iframe.src = iframe.src;
+        }
+      }, Math.pow(2, videoAttempts) * 1000);
+    } else {
+      setError('Unable to connect to the video service. Please check your connection and try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleVideoLoad = () => {
+    setIsLoading(false);
+    setVideoAttempts(0);
+  };
+
+  const toggleMic = () => setIsMicOn(!isMicOn);
+  const toggleCamera = () => {
+    if (!hasWebcamPermission) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(() => {
+          setHasWebcamPermission(true);
+          setIsCameraOn(true);
+        })
+        .catch(() => {
+          setError('Unable to access camera. Please check your permissions.');
+        });
+    } else {
+      setIsCameraOn(!isCameraOn);
+    }
+  };
+  const toggleAudio = () => setIsAudioOn(!isAudioOn);
 
   if (error) {
     return (
@@ -58,10 +99,14 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
               </div>
             )}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center text-neutral-400">
-                <h3 className="text-xl font-semibold mb-2">Video Session Unavailable</h3>
-                <p>Please use the chat interface for your therapy session.</p>
-              </div>
+              <iframe
+                src={`https://embed.tavus.io/${therapist.agentId}`}
+                title={`${therapist.name} - AI Therapist`}
+                className="w-full h-full border-0"
+                allow="camera; microphone; fullscreen"
+                onError={handleVideoError}
+                onLoad={handleVideoLoad}
+              />
             </div>
           </div>
         </div>
@@ -86,7 +131,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
       <div className="h-24 bg-neutral-800 border-t border-neutral-700">
         <div className="container mx-auto h-full flex items-center justify-center space-x-4">
           <Button
-            onClick={() => setIsMicOn(!isMicOn)}
+            onClick={toggleMic}
             variant={isMicOn ? 'primary' : 'outline'}
             className="h-12 w-12 rounded-full"
           >
@@ -94,7 +139,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
           </Button>
 
           <Button
-            onClick={() => setIsCameraOn(!isCameraOn)}
+            onClick={toggleCamera}
             variant={isCameraOn && hasWebcamPermission ? 'primary' : 'outline'}
             className="h-12 w-12 rounded-full"
           >
@@ -102,7 +147,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
           </Button>
 
           <Button
-            onClick={() => setIsAudioOn(!isAudioOn)}
+            onClick={toggleAudio}
             variant={isAudioOn ? 'primary' : 'outline'}
             className="h-12 w-12 rounded-full"
           >
