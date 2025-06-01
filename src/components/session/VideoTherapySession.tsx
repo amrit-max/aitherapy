@@ -20,8 +20,9 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
   const webcamRef = useRef<Webcam>(null);
   const therapist = THERAPIST_PROFILES[therapistType];
   const maxRetries = 3;
-
+  
   useEffect(() => {
+    // Check for webcam permission
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(() => setHasWebcamPermission(true))
       .catch((err) => {
@@ -34,6 +35,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
     if (videoAttempts < maxRetries) {
       setVideoAttempts(prev => prev + 1);
       setIsLoading(true);
+      // Retry with exponential backoff
       setTimeout(() => {
         const iframe = document.querySelector('iframe');
         if (iframe) {
@@ -41,7 +43,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
         }
       }, Math.pow(2, videoAttempts) * 1000);
     } else {
-      setError('Unable to connect to the AI therapist video. Please check your connection.');
+      setError('Unable to connect to the video service. Please check your connection and try again.');
       setIsLoading(false);
     }
   };
@@ -52,7 +54,6 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
   };
 
   const toggleMic = () => setIsMicOn(!isMicOn);
-
   const toggleCamera = () => {
     if (!hasWebcamPermission) {
       navigator.mediaDevices.getUserMedia({ video: true })
@@ -67,7 +68,6 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
       setIsCameraOn(!isCameraOn);
     }
   };
-
   const toggleAudio = () => setIsAudioOn(!isAudioOn);
 
   if (error) {
@@ -90,7 +90,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
   return (
     <div className="flex flex-col h-screen bg-neutral-900">
       <div className="flex-1 flex">
-        {/* Main video container (Tavus AI Avatar) */}
+        {/* Main video container */}
         <div className="w-full p-4">
           <div className="relative h-full rounded-2xl overflow-hidden bg-neutral-800">
             {isLoading && (
@@ -111,7 +111,7 @@ const VideoTherapySession: React.FC<VideoTherapySessionProps> = ({ therapistType
           </div>
         </div>
 
-        {/* User video (overlay) */}
+        {/* User video (small overlay) */}
         {isCameraOn && hasWebcamPermission && (
           <div className="absolute bottom-28 right-8 w-64 h-48 rounded-xl overflow-hidden shadow-lg">
             <Webcam
